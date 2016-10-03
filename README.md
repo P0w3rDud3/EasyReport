@@ -1,6 +1,12 @@
 # EasyReport
-A script to easily create full blown HTML reports
 
-This script creates a nice HTML report by just entering some parameters.
+A script to easily create HTML reports with only a few parameters
 
-In the first release, it will only report the content of one table, but in the future this might be extended to more tables or other types of content.
+These parameters can be set:
+
+- Title: Will be shown in the tab or title bar of the browser
+- Report Title: Will be shown on top of the report
+- Text: A text, placed directly under the Report title
+- Data: The actual data to be reported which can be a HTML fragment
+
+The report can also have a logo
