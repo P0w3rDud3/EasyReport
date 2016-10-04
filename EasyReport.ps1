@@ -1,43 +1,128 @@
 ﻿<#
   .NOTES
 
-  Created with:  <enter the title of the project>
-  Creation Date: <enter the filename>
-  Created by:    <author>
-  Filename:      <filename>
+  Created with:  PowerShell ISE
+  Creation Date: 03-10-2016
+  Created by:    Christof Van Geendertaelen
+  Filename:      EasyReport.ps1
 
   .SYNOPSIS
-        A brief description of the function or script. This keyword can be used
-        only once in each topic.
+        This scripts creates an html report using only a few parameters.
 
   .DESCRIPTION
-        A detailed description of the function or script. This keyword can be
-        used only once in each topic.
+        When you need an HTML report fast, this script allows you to generate
+        an HTML report with only a few parameters. The rest of the logic is
+        handled by this script.
 
-  .PARAMETER  <Parameter-Name>
-        The description of a parameter. Add a .PARAMETER keyword for
-        each parameter in the function or script syntax.
+  .PARAMETER Logo
+        The path to the logo. The logo is converted by the script to base 64
+        encoding. This is the only way to show the logo in an Outlook email.
 
-        Type the parameter name on the same line as the .PARAMETER keyword. 
-        Type the parameter description on the lines following the .PARAMETER
-        keyword. Windows PowerShell interprets all text between the .PARAMETER
-        line and the next keyword or the end of the comment block as part of
-        the parameter description. The description can include paragraph breaks.
+  .PARAMETER Title
+        This is the title of the report.
+        
+  .PARAMETER Text
+        This text is displayed directly under the header of the report and can
+        be used to write a brief introduction for the upcoming report or data. 
 
-        The Parameter keywords can appear in any order in the comment block, but
-        the function or script syntax determines the order in which the parameters
-        (and their descriptions) appear in help topic. To change the order,
-        change the syntax.
- 
-        You can also specify a parameter description by placing a comment in the
-        function or script syntax immediately before the parameter variable name.
-        If you use both a syntax comment and a Parameter keyword, the description
-        associated with the Parameter keyword is used, and the syntax comment is
-        ignored.
-
+  .PARAMETER Data
+        The actual data that will be displayed is passed using the Data parameter.
+        
+        The data should be delivered as an html fragment which can be generated
+        quite easily using the ConvertT-HTML -Fragment Commandlet which is
+        natively available in PowerShell.
 
   .EXAMPLE
-        A sample command that uses the function or script, optionally followed
-        by sample output and a description. Repeat this keyword for each example.
+        EasyReport.ps1 -Logo 'logo.png' -Title 'ReportHeader' -Text $TextVariable
+            -Data $DataVariable
 
 #>
+
+# Parameter section
+
+Param(
+    
+    [string]$LogoPath,
+    [string]$ReportTitle,
+    [string]$ReportText,
+    [string]$ReportData
+
+)
+
+Function ConvertLogoToBase64($ConvertLogoToBase64_LogoPath)
+{
+    # Convert the logo to a Base 64 encoded value that can be enclosed in the Report
+
+    $Base64Logo = [convert]::ToBase64String((Get-Content $ConvertLogoToBase64_LogoPath -Encoding Byte))
+    
+    Return $Base64Logo
+}
+
+Function FindImageHeight($FindImageHeight_LogoPath)
+{
+    # Find the height of the logo
+
+    $Image = [System.Drawing.Image]::FromFile((Get-ChildItem $FindImageHeight_LogoPath).FullName)
+
+    $Height = ($Image | Select -ExpandProperty Size | Select Height).Height
+
+    Return $Height
+}
+
+Function BuildHtml($Logo, $Height, $Title, $Text, $Data)
+{
+    # Build the actual HTML code
+
+    $HTMLHeader = @"
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Frameset//EN" "http://www.w3.org/TR/html4/frameset.dtd">
+<html>
+<head>
+<title>My Systems Report</title>
+<style>
+	body {
+		font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+	}
+	table, tr, td {
+		border: 1px solid black;
+		border-collapse: collapse;
+	}
+	th {
+		background-color: #ffffff;
+	}
+	tr:hover {
+		background-color: #f5f5f5;
+	}
+	#Logo {
+		float: left;
+        height: $($Height)px;
+        vertical-align: middle;
+	}
+	#Title {
+		position: relative;
+		left: 10px;
+        height: $($Height)px;
+        line-height: $($Height)px;
+	}
+</style>
+</head>
+<div>
+<img id="Logo" src="data:image/png;base64,$($Logo)" />
+<h1 id="Title">$($Title)</h1>
+</div>
+<hr />
+<p>$($Text)</p>
+<br />
+$($data)
+"@
+
+    Return $HTMLHeader
+
+}
+
+$ConvertLogoToBase64 = ConvertLogoToBase64 $LogoPath
+
+$LogoHeight = FindImageHeight $LogoPath
+
+$HTMLReport = BuildHtml $ConvertLogoToBase64 $LogoHeight $ReportTitle $ReportText $ReportData
+
+$HTMLReport
